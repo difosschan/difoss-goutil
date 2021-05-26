@@ -1,7 +1,7 @@
 package log
 
 import (
-	"difoss-goutil/util/log/rotate"
+	"github.com/difosschan/difoss-goutil/util/log/rotate"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

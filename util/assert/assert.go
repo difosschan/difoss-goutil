@@ -2,7 +2,7 @@ package assert
 
 import (
 	"fmt"
-	"difoss-goutil/util"
+	"github.com/difosschan/difoss-goutil/util"
 	"testing"
 )
 

@@ -2,11 +2,12 @@ package util
 
 import (
 	"fmt"
+	"net"
+
+	"github.com/difosschan/difoss-goutil/util/enum"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/multiformats/go-multiaddr-net"
 	"github.com/whyrusleeping/multiaddr-filter"
-	"net"
-	"difoss-goutil/util/enum"
 )
 
 // DEPRECATED:

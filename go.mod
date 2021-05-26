@@ -1,4 +1,4 @@
-module difoss-goutil
+module github.com/difosschan/difoss-goutil
 
 go 1.14
 

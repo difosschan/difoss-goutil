@@ -3,8 +3,6 @@ package http_util
 import (
 	"bytes"
 	"context"
-	"difoss-goutil/frame"
-	"difoss-goutil/util"
 	"errors"
 	"io"
 	"mime/multipart"
@@ -13,6 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/difosschan/difoss-goutil/frame"
+	"github.com/difosschan/difoss-goutil/util"
 )
 
 func NewFileUploadRequest(url, filedName string, path string, params map[string]string) (*http.Request, error) {
