@@ -1,9 +1,33 @@
+# idea ignore
+.idea/
+*.ipr
+*.iml
+*.iws
+.vscode/
+
+# temp ignore
+*.log
+*.cache
+*.diff
+*.patch
+*.swp
+*.tmp
+
+# system ignore
+.DS_Store
+Thumbs.db
+
+# project
+*.cert
+*.key
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+bin/
 
 # Test binary, built with `go test -c`
 *.test
@@ -12,4 +36,12 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
+
+# Use go mod init to keep go.mod more fresh
+go.sum
+
+# Submodule
+
+# Other directories
+.proving/
