@@ -1,9 +1,7 @@
 package util
 
 import (
-	"path"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strings"
 )
@@ -12,15 +10,10 @@ var IsRelByBasedir = true
 
 var baseDir string
 
-type em struct{}
-
 func init() {
 	f, _, _, _ := GetFuncInfo(0)
 	absDir, _ := filepath.Abs(f)
-	curDir := path.Dir(absDir)
-	curPkgPath := reflect.TypeOf(em{}).PkgPath()
-	baseDir = strings.TrimSuffix(curDir, curPkgPath)
-	baseDir = strings.TrimSuffix(baseDir, string(filepath.Separator))
+	baseDir = GetLinuxStylePath(absDir)
 }
 
 func GetFuncInfo(skip int) (file string, line int, funcName string, ok bool) {

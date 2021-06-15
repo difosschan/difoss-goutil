@@ -57,3 +57,10 @@ func FilePathJoinSafely(base string, children ...string) (string, error) {
 	}
 	return joinedDir, nil
 }
+
+func GetLinuxStylePath(path string) (linuxPath string) {
+	if runtime.GOOS == "windows" {
+		return strings.ReplaceAll(path, "\\", "/")
+	}
+	return path
+}
