@@ -69,13 +69,15 @@ func MergeStruct(dest, addition interface{}) error {
 	return nil
 }
 
-func StructToString(s interface{}) (result string) {
+func StructToString(s interface{}, showZero ...bool) (result string) {
 	t := reflect.TypeOf(s)
 	v := reflect.ValueOf(s)
 
 	if t.Kind() != reflect.Struct {
 		return
 	}
+
+	checkZero := len(showZero) == 0 || false == showZero[0]
 
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -84,11 +86,18 @@ func StructToString(s interface{}) (result string) {
 		if strings.ToLower(f.Tag.Get("disable")) == "true" {
 			continue
 		}
-		value := v.FieldByName(f.Name).Interface()
+		value := v.FieldByName(f.Name)
+		if checkZero && value.IsZero() {
+			continue
+		}
+		valueInterface := value.Interface()
+		if value.Kind() == reflect.Struct {
+			valueInterface = string("{") + StructToString(valueInterface, showZero...) + "}"
+		}
 		if i != 0 {
 			result += ", "
 		}
-		result += fmt.Sprintf("%v: %v", key, value)
+		result += fmt.Sprintf("%v: %v", key, valueInterface)
 	}
 	return
 }
