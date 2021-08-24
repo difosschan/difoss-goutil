@@ -8,10 +8,21 @@ import (
 	"os"
 )
 
+type Encoding string
+
+const (
+	CapitalColorful   Encoding = "capital_colorful"
+	LowercaseColorful Encoding = "LowercaseColorful"
+	Colorful          Encoding = "colorful" // Compared with CapitalColorful, it has same effect.
+	Color             Encoding = "color"
+	Json              Encoding = "json"
+	Console           Encoding = "console"
+)
+
 type WriterConfig struct {
-	Enable   bool   `json:"enable"`
-	Level    string `json:"level"` // 可选值: debug（默认）, info, warn, error, dpanic, panic, fatal
-	Encoding string `json:"encoding"`
+	Enable   bool          `json:"enable"`
+	Level    zapcore.Level `json:"level"`
+	Encoding `json:"encoding"`
 }
 
 type Config struct {
@@ -22,19 +33,10 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		StdoutWriter: WriterConfig{true, "debug", "colorful"},
-		FileWriter:   WriterConfig{false, "info", "console"},
+		StdoutWriter: WriterConfig{true, zap.DebugLevel, Colorful},
+		FileWriter:   WriterConfig{false, zap.InfoLevel, Console},
 		Rotate:       *rotate.DefaultConfig(),
 	}
-}
-
-func unmarshalLevel(level string) zapcore.Level {
-	var e error
-	var zapLevel zapcore.Level
-	if e = zapLevel.Set(level); e != nil {
-		zapLevel = zapcore.DebugLevel
-	}
-	return zapLevel
 }
 
 func (cfg *Config) Build() *zap.Logger {
@@ -42,31 +44,34 @@ func (cfg *Config) Build() *zap.Logger {
 
 	if cfg.StdoutWriter.Enable {
 		cores = append(cores, zapcore.NewCore(
-			getEncoder(cfg.StdoutWriter.Encoding), zapcore.AddSync(os.Stdout), unmarshalLevel(cfg.StdoutWriter.Level)))
+			getEncoder(cfg.StdoutWriter.Encoding), zapcore.AddSync(os.Stdout), cfg.StdoutWriter.Level))
 	}
 
 	if cfg.FileWriter.Enable {
 		cores = append(cores, zapcore.NewCore(
-			getEncoder(cfg.FileWriter.Encoding), rotate.GetLogWriter(&cfg.Rotate), unmarshalLevel(cfg.FileWriter.Level)))
+			getEncoder(cfg.FileWriter.Encoding), rotate.GetLogWriter(&cfg.Rotate), cfg.FileWriter.Level))
 	}
 	core := zapcore.NewTee(cores...)
 	logger := zap.New(core, zap.AddCaller())
 	return logger
 }
 
-func getEncoder(encoding string) zapcore.Encoder {
+func getEncoder(encoding Encoding) zapcore.Encoder {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 	var encoder zapcore.Encoder
 	switch encoding {
-	case "colorful":
+	case Color, Colorful, CapitalColorful:
 		encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	case "json":
+	case LowercaseColorful:
+		encoderConfig.EncodeLevel = zapcore.LowercaseColorLevelEncoder
+		encoder = zapcore.NewConsoleEncoder(encoderConfig)
+	case Json:
 		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	case "console":
+	case Console:
 		encoder = zapcore.NewConsoleEncoder(encoderConfig)
 	}
 	return encoder

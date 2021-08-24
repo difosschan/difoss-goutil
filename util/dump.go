@@ -4,10 +4,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"reflect"
 	"strconv"
 	"strings"
+)
+
+type MergeMode int
+
+const (
+	// Overwrite the non-empty fields in A (addition) over the corresponding fields in D (dest).
+	OverwriteWithNonEmpty MergeMode = iota
+
+	// Fill in the blank field of D (dest) with corresponding fields in A (addition).
+	// In this way, fields that have non-empty values will not be affected.
+	FillBlank
+)
+
+var (
+	TypeMustBeStruct = errors.New("type must be struct")
 )
 
 func JsonDump(v interface{}, indent int) string {
@@ -25,48 +39,89 @@ func JsonDump(v interface{}, indent int) string {
 	return string(b)
 }
 
-func MergeMap(dest, addition map[string]interface{}) {
+func MergeMap(dest, addition map[string]interface{}, mode MergeMode) {
 	for k, v := range addition {
-		value := reflect.ValueOf(v)
-		isZero := value.IsZero()
+		addValue := reflect.ValueOf(v)
+		isZero := addValue.IsZero()
+
 		if !isZero {
-			if _, ok := dest[k]; ok {
-				dest[k] = reflect.New(value.Type())
-				dest[k] = v
+			if destValue, ok := dest[k]; ok {
+				// log.Printf("IN dest[%s]=%v, reflect.ValueOf(destValue)=%v, destValue.IsZero=%v\n",
+				// 	k, destValue, reflect.ValueOf(destValue), reflect.ValueOf(destValue).IsZero())
+				if addValue.Kind() == reflect.Map {
+					destMapValue, destOK := destValue.(map[string]interface{})
+					addMapValue, addOK := v.(map[string]interface{})
+					if destOK && addOK {
+						// log.Printf("RECURSIVE CALL MergeMap(), k = %s \n", k)
+						MergeMap(destMapValue, addMapValue, mode)
+						dest[k] = destMapValue
+						continue
+					}
+				}
+				if mode == FillBlank {
+					if ! reflect.ValueOf(destValue).IsZero() {
+						continue
+					} else {
+						// log.Printf("destValue[%s] IsZero\n", k)
+					}
+				}
 			}
+			dest[k] = reflect.New(addValue.Type())
+			dest[k] = v
 		}
 	}
 	return
 }
 
-func MergeStruct(dest, addition interface{}) error {
-	t := reflect.TypeOf(addition)
-	v := reflect.ValueOf(addition)
+func MergeStruct(out, in interface{}, mode MergeMode) (result interface{}, err error) {
+	outType := reflect.TypeOf(out)
+	outValue := reflect.ValueOf(out)
 
-	if t.Kind() != reflect.Struct {
-		return errors.New("Type must be struct")
+	if outValue.Kind() != reflect.Struct {
+		return nil, TypeMustBeStruct
 	}
 
-	for i := 0; i < t.NumField(); i ++ {
-		f := t.Field(i)
+	r := reflect.New(outType).Elem()
 
-		iValue := v.Field(i)
-		kind := iValue.Kind()
-		zap.S().Debug("v:", v, "v.Kind():", kind)
-		if kind == reflect.Struct {
-			if e := MergeStruct(
-				reflect.ValueOf(dest).FieldByName(f.Name),
-				StructToMap(iValue)); e != nil {
-				return e
-			}
-		} else {
-			if !iValue.IsNil() && !iValue.IsZero() {
-				reflect.ValueOf(dest).FieldByName(f.Name).Set(iValue)
-			}
+	outFieldCnt := outValue.NumField()
+	for i := 0; i < outFieldCnt; i ++ {
+		iOutName := outType.Field(i).Name
+		iOutValue := outValue.Field(i)
+
+		iResultValue := r.FieldByName(iOutName)
+		iResultValue.Set(iOutValue)
+
+		if !iOutValue.IsValid() {
+			continue
 		}
 
+		iOutKind := iOutValue.Kind()
+		iInValue := reflect.ValueOf(in).FieldByName(iOutName)
+		// fmt.Printf("%d/%d: (kind=%v), out[%s] <<%s>> = %v\n",
+		// 	i, outFieldCnt, iOutKind, iOutName, iOutValue.Type().String(), iOutValue)
+
+		if !iInValue.IsValid() || iInValue.IsZero() {
+			continue // `in` did not contain field named by `iOutName`
+		}
+		// fmt.Printf("\t [%s] in  .Value: %v, .Kind(): %v\n",
+		// 	iOutName, iInValue, iInValue.Kind())
+
+		if iOutKind == reflect.Struct {
+			if res, err := MergeStruct(iOutValue.Interface(), iInValue.Interface(), mode); err != nil {
+				return nil, err
+			} else {
+				iResultValue.Set(reflect.ValueOf(res))
+			}
+		} else {
+			if mode == FillBlank {
+				if !iOutValue.IsZero() {
+					continue
+				}
+			}
+			iResultValue.Set(iInValue)
+		}
 	}
-	return nil
+	return r.Interface(), nil
 }
 
 func StructToString(s interface{}, showZero ...bool) (result string) {
