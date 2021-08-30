@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"reflect"
 	"strconv"
 	"strings"
@@ -194,4 +195,8 @@ func StructToMap(o interface{}) map[string]interface{} {
 		}
 	}
 	return maps
+}
+
+func MapToStruct(inputMap map[string]interface{}, outStructPtr interface{}) error {
+	return mapstructure.Decode(inputMap, outStructPtr)
 }

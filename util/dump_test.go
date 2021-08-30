@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"github.com/difosschan/difoss-goutil/util/log"
 	"github.com/difosschan/difoss-goutil/util/log/rotate"
 	"github.com/magiconair/properties/assert"
@@ -306,4 +307,68 @@ func TestMergeStructFillBlank(t *testing.T) {
 	}
 	t.Log("After MergeStruct(how: FillBlank), c =", JsonDump(c, 2))
 	assert.Equal(t, c, target)
+}
+
+type Basic struct {
+	Vstring     string
+	Vint        int
+	Vint8       int8
+	Vint16      int16
+	Vint32      int32
+	Vint64      int64
+	Vuint       uint
+	Vbool       bool
+	Vfloat      float64
+	Vextra      string
+	vsilent     bool
+	Vdata       interface{}
+	VjsonInt    int
+	VjsonUint   uint
+	VjsonFloat  float64
+	VjsonNumber json.Number
+}
+
+type BasicPointer struct {
+	Vstring     *string
+	Vint        *int
+	Vuint       *uint
+	Vbool       *bool
+	Vfloat      *float64
+	Vextra      *string
+	vsilent     *bool
+	Vdata       *interface{}
+	VjsonInt    *int
+	VjsonFloat  *float64
+	VjsonNumber *json.Number
+}
+
+type NestedSlice struct {
+	Vfoo   string
+	Vbars  []Basic
+	Vempty []Basic
+}
+
+func TestMapToStruct(t *testing.T) {
+	input := map[string]interface{}{
+		"vfoo": "foo",
+		"vbars": []map[string]interface{}{
+			{"vstring": "foo", "vint": 42, "vbool": true},
+			{"vint": 42, "vbool": true},
+		},
+		"vempty": []map[string]interface{}{
+			{"vstring": "foo", "vint": 42, "vbool": true},
+			{"vint": 42, "vbool": true},
+		},
+	}
+
+	result := NestedSlice{
+		Vbars: []Basic{
+			{Vuint: 42},
+			{Vstring: "foo"},
+		},
+	}
+	err := MapToStruct(input, &result)
+	if err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
 }
