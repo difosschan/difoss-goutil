@@ -11,12 +11,17 @@ import (
 
 type MergeMode int
 
+// Merge A -> D
 const (
 	// Overwrite the non-empty fields in A (addition) over the corresponding fields in D (dest).
+	// For short: A(non-empty fields) ----> D
 	OverwriteWithNonEmpty MergeMode = iota
-
+	// Overwrite all fields owned by A (addition).
+	// For short: A(all fields) ----> D
+	Overwrite
 	// Fill in the blank field of D (dest) with corresponding fields in A (addition).
 	// In this way, fields that have non-empty values will not be affected.
+	// For short: A(non-empty fields that is empty in D) ----> D
 	FillBlank
 )
 
@@ -42,33 +47,34 @@ func JsonDump(v interface{}, indent int) string {
 func MergeMap(dest, addition map[string]interface{}, mode MergeMode) {
 	for k, v := range addition {
 		addValue := reflect.ValueOf(v)
-		isZero := addValue.IsZero()
 
-		if !isZero {
-			if destValue, ok := dest[k]; ok {
-				// log.Printf("IN dest[%s]=%v, reflect.ValueOf(destValue)=%v, destValue.IsZero=%v\n",
-				// 	k, destValue, reflect.ValueOf(destValue), reflect.ValueOf(destValue).IsZero())
-				if addValue.Kind() == reflect.Map {
-					destMapValue, destOK := destValue.(map[string]interface{})
-					addMapValue, addOK := v.(map[string]interface{})
-					if destOK && addOK {
-						// log.Printf("RECURSIVE CALL MergeMap(), k = %s \n", k)
-						MergeMap(destMapValue, addMapValue, mode)
-						dest[k] = destMapValue
-						continue
-					}
-				}
-				if mode == FillBlank {
-					if ! reflect.ValueOf(destValue).IsZero() {
-						continue
-					} else {
-						// log.Printf("destValue[%s] IsZero\n", k)
-					}
+		if destValue, ok := dest[k]; ok {
+			// log.Printf("IN dest[%s]=%v, reflect.ValueOf(destValue)=%v, destValue.IsZero=%v\n",
+			// 	k, destValue, reflect.ValueOf(destValue), reflect.ValueOf(destValue).IsZero())
+
+			if addValue.Kind() == reflect.Map {
+				destMapValue, destOK := destValue.(map[string]interface{})
+				addMapValue, addOK := v.(map[string]interface{})
+				if destOK && addOK {
+					// log.Printf("RECURSIVE CALL MergeMap(), k = %s \n", k)
+					MergeMap(destMapValue, addMapValue, mode)
+					dest[k] = destMapValue
+					continue
 				}
 			}
-			dest[k] = reflect.New(addValue.Type())
-			dest[k] = v
+
+			if mode == FillBlank {
+				if ! reflect.ValueOf(destValue).IsZero() {
+					continue
+				}
+			} else if mode == OverwriteWithNonEmpty {
+				if addValue.IsZero() {
+					continue
+				}
+			}
 		}
+		dest[k] = reflect.New(addValue.Type())
+		dest[k] = v
 	}
 	return
 }
@@ -100,7 +106,7 @@ func MergeStruct(out, in interface{}, mode MergeMode) (result interface{}, err e
 		// fmt.Printf("%d/%d: (kind=%v), out[%s] <<%s>> = %v\n",
 		// 	i, outFieldCnt, iOutKind, iOutName, iOutValue.Type().String(), iOutValue)
 
-		if !iInValue.IsValid() || iInValue.IsZero() {
+		if !iInValue.IsValid() {
 			continue // `in` did not contain field named by `iOutName`
 		}
 		// fmt.Printf("\t [%s] in  .Value: %v, .Kind(): %v\n",
@@ -115,6 +121,10 @@ func MergeStruct(out, in interface{}, mode MergeMode) (result interface{}, err e
 		} else {
 			if mode == FillBlank {
 				if !iOutValue.IsZero() {
+					continue
+				}
+			} else if mode == OverwriteWithNonEmpty {
+				if iInValue.IsZero() {
 					continue
 				}
 			}

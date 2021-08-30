@@ -72,6 +72,70 @@ func TestMergeMapOverwriteWithNonEmpty(t *testing.T) {
 	assert.Equal(t, a, target)
 }
 
+func TestMergeMapOverwrite(t *testing.T) {
+	var a = map[string]interface{}{
+		"log": map[string]interface{}{
+			"stdout_writer": map[string]interface{}{
+				"enable":   true,
+				"encoding": "colorful",
+			},
+			"rotate": map[string]interface{}{
+				"is_compress": true,
+				"max_age_day": 10,
+			},
+		},
+	}
+
+	var b = map[string]interface{}{
+		"log": map[string]interface{}{
+			"stdout_writer": map[string]interface{}{
+				"level":    "info", // will add
+				"encoding": "json", // will modify
+			},
+			"rotate": map[string]interface{}{
+				"is_compress": false, // zero value but still be modified
+				"max_age_day": 0,     // zero value but still be modified
+			},
+			"addition_key": 123, // will add
+			"addition_map": map[string]interface{}{ // will add
+				"i": 1000,
+				"s": "string",
+				"map": map[string]interface{}{
+					"d": 0.2,
+				},
+			},
+		},
+	}
+
+	var target = map[string]interface{}{
+		"log": map[string]interface{}{
+			"stdout_writer": map[string]interface{}{
+				"enable":   true,
+				"level":    "info",
+				"encoding": "json",
+			},
+			"rotate": map[string]interface{}{
+				"is_compress": false,
+				"max_age_day": 0,
+			},
+			"addition_key": 123, // will add
+			"addition_map": map[string]interface{}{ // will add
+				"i": 1000,
+				"s": "string",
+				"map": map[string]interface{}{
+					"d": 0.2,
+				},
+			},
+		},
+	}
+
+	t.Log("a =", JsonDump(a, 2))
+	t.Log("b =", JsonDump(b, 2))
+	MergeMap(a, b, Overwrite)
+	t.Log("AFTER MergeMap(how: OverwriteWithNonEmpty), a =", JsonDump(a, 2))
+	assert.Equal(t, a, target)
+}
+
 func TestMergeMapFillBlank(t *testing.T) {
 	var a = map[string]interface{}{
 		"log": map[string]interface{}{
