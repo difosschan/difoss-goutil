@@ -1,44 +1,44 @@
 package util
 
-type SIZE uint64
+type ByteSize uint64
 
-// 定义文件单位
+// Common units for calculating size
 const (
-	BYTE SIZE = 1
-	KB   SIZE = 1024 * BYTE
-	MB   SIZE = 1024 * KB
-	GB   SIZE = 1024 * MB
-	TB   SIZE = 1024 * GB
+	BYTE ByteSize = 1
+	KB            = 1024 * BYTE
+	MB            = 1024 * KB
+	GB            = 1024 * MB
+	TB            = 1024 * GB
 )
 
-func (s SIZE) Add(arg SIZE) SIZE {
+func (s ByteSize) Add(arg ByteSize) ByteSize {
 	return s + arg
 }
 
-func (s SIZE) Del(arg SIZE) SIZE {
+func (s ByteSize) Del(arg ByteSize) ByteSize {
 	return s - arg
 }
 
-func (s SIZE) Mul(arg SIZE) SIZE {
+func (s ByteSize) Mul(arg ByteSize) ByteSize {
 	return s * arg
 }
 
-func (s SIZE) Div(arg SIZE) SIZE {
+func (s ByteSize) Div(arg ByteSize) ByteSize {
 	return s / arg
 }
 
-func (s SIZE) TB() SIZE {
+func (s ByteSize) TB() ByteSize {
 	return s / TB
 }
 
-func (s SIZE) GB() SIZE {
+func (s ByteSize) GB() ByteSize {
 	return s / GB
 }
 
-func (s SIZE) MB() SIZE {
+func (s ByteSize) MB() ByteSize {
 	return s / MB
 }
 
-func (s SIZE) KB() SIZE {
+func (s ByteSize) KB() ByteSize {
 	return s / KB
 }
