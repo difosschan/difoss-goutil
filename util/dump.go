@@ -30,9 +30,8 @@ var (
 	TypeMustBeStruct = errors.New("type must be struct")
 )
 
-func JsonDump(v interface{}, indent int) string {
+func JsonDumpE(v interface{}, indent int) (result string, err error) {
 	var b []byte
-	var err error
 	if indent > 0 {
 		b, err = json.MarshalIndent(v, " ", strings.Repeat(" ", indent))
 	} else {
@@ -40,9 +39,14 @@ func JsonDump(v interface{}, indent int) string {
 	}
 
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return string(b)
+	return string(b), nil
+}
+
+func JsonDump(v interface{}, indent int) string {
+	s, _ := JsonDumpE(v, indent)
+	return s
 }
 
 func MergeMap(dest, addition map[string]interface{}, mode MergeMode) {
@@ -199,4 +203,15 @@ func StructToMap(o interface{}) map[string]interface{} {
 
 func MapToStruct(inputMap map[string]interface{}, outStructPtr interface{}) error {
 	return mapstructure.Decode(inputMap, outStructPtr)
+}
+
+func MapToStructByJson(inputMap map[string]interface{}, outStructPtr interface{}) error {
+	bs, err := json.Marshal(inputMap)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(bs, outStructPtr); err != nil {
+		return err
+	}
+	return nil
 }

@@ -25,6 +25,8 @@ var LogConfigYaml = `log:
     max_age_day: 10
     max_backup: 10
     max_size_mb: 1
+  stack_trace_level: warn
+  add_caller: true
 `
 
 func TestLoadConfig(t *testing.T) {
@@ -56,4 +58,6 @@ func TestLoadConfig(t *testing.T) {
 
 	zap.L().Debug("test debug log...")
 	zap.L().Info("test info log...")
+	zap.L().Warn("test warn log...")
+	zap.L().Error("test error log...")
 }

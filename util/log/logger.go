@@ -22,24 +22,30 @@ const (
 type WriterConfig struct {
 	Enable   bool          `json:"enable"`
 	Level    zapcore.Level `json:"level"`
-	Encoding `json:"encoding"`
+	Encoding Encoding      `json:"encoding"`
 }
 
 type Config struct {
-	StdoutWriter WriterConfig  `json:"stdout_writer,omitempty"`
-	FileWriter   WriterConfig  `json:"file_writer,omitempty"`
-	Rotate       rotate.Config `json:"rotate"`
+	StdoutWriter    WriterConfig  `json:"stdout_writer,omitempty"`
+	FileWriter      WriterConfig  `json:"file_writer,omitempty"`
+	Rotate          rotate.Config `json:"rotate"`
+	AddCaller       bool          `json:"add_caller"`
+	StackTraceLevel zapcore.Level `json:"stack_trace_level"`
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		StdoutWriter: WriterConfig{true, zap.DebugLevel, Colorful},
-		FileWriter:   WriterConfig{false, zap.InfoLevel, Console},
-		Rotate:       *rotate.DefaultConfig(),
+		StdoutWriter: WriterConfig{
+			Enable: true, Level: zap.DebugLevel, Encoding: Colorful},
+		FileWriter: WriterConfig{
+			Enable: false, Level: zap.InfoLevel, Encoding: Console},
+		Rotate: *rotate.DefaultConfig(),
+
+		StackTraceLevel: zap.WarnLevel,
 	}
 }
 
-func (cfg *Config) Build() *zap.Logger {
+func (cfg *Config) Build(options ...zap.Option) *zap.Logger {
 	var cores []zapcore.Core
 
 	if cfg.StdoutWriter.Enable {
@@ -52,7 +58,14 @@ func (cfg *Config) Build() *zap.Logger {
 			getEncoder(cfg.FileWriter.Encoding), rotate.GetLogWriter(&cfg.Rotate), cfg.FileWriter.Level))
 	}
 	core := zapcore.NewTee(cores...)
-	logger := zap.New(core, zap.AddCaller())
+
+	if cfg.AddCaller {
+		options = append(options, zap.AddCaller())
+	}
+	if cfg.StackTraceLevel > zapcore.InfoLevel {
+		options = append(options, zap.AddStacktrace(cfg.StackTraceLevel))
+	}
+	logger := zap.New(core, options...)
 	return logger
 }
 
